@@ -25,7 +25,7 @@ class AuthController extends Controller
             $fields = $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => 'required|string|email|max:255|unique:users',
-                'password' => 'required|string|min:6|confirmed',
+                'password' => 'required|string|min:8|confirmed',
                 'phone' => 'nullable|string|max:20',
                 'address' => 'nullable|string',
             ]);
@@ -42,13 +42,41 @@ class AuthController extends Controller
                 ]
             ], 201);
         } catch (ValidationException $e) {
+            $errors = $e->errors();
+            $message = 'Lỗi xác thực dữ liệu';
+            
+            // Xử lý thông báo lỗi cụ thể cho từng trường hợp
+            if (isset($errors['email'])) {
+                foreach ($errors['email'] as $error) {
+                    if (str_contains($error, 'has already been taken')) {
+                        $message = 'Email đã tồn tại trong hệ thống';
+                        break;
+                    }
+                }
+            } elseif (isset($errors['password'])) {
+                if (str_contains(implode(' ', $errors['password']), 'confirmation')) {
+                    $message = 'Mật khẩu xác nhận không khớp';
+                } elseif (str_contains(implode(' ', $errors['password']), 'at least')) {
+                    $message = 'Mật khẩu phải có ít nhất 8 ký tự';
+                }
+            } elseif (isset($errors['name'])) {
+                $message = 'Vui lòng nhập tên của bạn';
+            }
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Lỗi xác thực dữ liệu',
-                'errors' => $e->errors()
+                'message' => $message,
+                'errors' => $errors
             ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Đã xảy ra lỗi trong quá trình đăng ký',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
+
 
     /**
      * Đăng nhập người dùng
@@ -59,27 +87,43 @@ class AuthController extends Controller
             $fields = $request->validate([
                 'email' => 'required|string|email',
                 'password' => 'required|string',
+                'remember' => 'boolean', // Thêm trường remember
             ]);
 
             $user = User::where('email', $request->email)->first();
 
-            if(!$user || !Hash::check($request->password, $user->password)) {
+            if (!$user || !Hash::check($request->password, $user->password)) {
                 return response()->json([
                     'success' => false,
                     'message' => "Email hoặc mật khẩu không chính xác"
                 ], 401);
             }
 
-            $token = $user->createToken($user->name);
+            // Xác định thời hạn token dựa vào "remember me"
+            $tokenExpiration = $request->remember ? now()->addMonths(6) : now()->addDay();
+            
+            // Xóa các token cũ nếu có
+            $user->tokens()->delete();
+            
+            // Tạo token mới với thời hạn tương ứng
+            $token = $user->createToken($user->name, ['*'], $tokenExpiration);
+
+            // Chuẩn bị dữ liệu trả về
+            $responseData = [
+                'user' => $user,
+                'token' => $token->plainTextToken,
+                'token_type' => 'Bearer',
+            ];
+
+            // Chỉ thêm expires_at nếu remember là true
+            if ($request->remember) {
+                $responseData['expires_at'] = $tokenExpiration->toDateTimeString();
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Đăng nhập thành công',
-                'data' => [
-                    'user' => $user,
-                    'token' => $token->plainTextToken,
-                    'token_type' => 'Bearer',
-                ]
+                'data' => $responseData
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -89,6 +133,7 @@ class AuthController extends Controller
             ], 422);
         }
     }
+
 
     /**
      * Đăng xuất người dùng
@@ -113,104 +158,5 @@ class AuthController extends Controller
                 'user' => $request->user()
             ]
         ]);
-    }
-
-    /**
-     * Chuyển hướng người dùng đến trang đăng nhập Google
-     */
-    public function redirectToGoogle()
-    {
-        $client = new \GuzzleHttp\Client(['verify' => false]);
-    
-        return response()->json([
-            'success' => true,
-            'url' => Socialite::driver('google')
-                    ->setHttpClient($client)
-                    ->stateless()
-                    ->redirect()
-                    ->getTargetUrl()
-        ]);
-    }
-
-    /**
-     * Xử lý callback từ Google sau khi xác thực
-     */
-    public function handleGoogleCallback()
-    {
-        try {
-            // Tạo instance của Guzzle Client với tùy chọn tắt xác minh SSL
-            $client = new \GuzzleHttp\Client(['verify' => false]);
-            
-            // Cấu hình Socialite để sử dụng client tùy chỉnh
-            $googleUser = Socialite::driver('google')
-                ->setHttpClient($client)
-                ->stateless()
-                ->user();
-                
-            $googleUser = Socialite::driver('google')->stateless()->user();
-            
-            // Bắt đầu transaction để đảm bảo tính nhất quán dữ liệu
-            DB::beginTransaction();
-            
-            // Kiểm tra xem tài khoản Google đã liên kết với người dùng nào chưa
-            $socialAccount = SocialAccount::where('provider_name', 'google')
-                ->where('provider_id', $googleUser->id)
-                ->first();
-                
-            if ($socialAccount) {
-                // Nếu đã có tài khoản liên kết, lấy thông tin người dùng
-                $user = $socialAccount->user;
-                
-                // Cập nhật thông tin avatar nếu cần
-                if ($googleUser->avatar && !$user->avatar) {
-                    $user->avatar = $googleUser->avatar;
-                    $user->save();
-                }
-            } else {
-                // Kiểm tra xem email đã tồn tại trong hệ thống chưa
-                $user = User::where('email', $googleUser->email)->first();
-                
-                if (!$user) {
-                    // Tạo người dùng mới nếu chưa tồn tại
-                    $user = User::create([
-                        'name' => $googleUser->name,
-                        'email' => $googleUser->email,
-                        'avatar' => $googleUser->avatar ?? url('/storage/avatars/default.jpg'),
-                        'role' => 'customer', // Mặc định là khách hàng
-                        'email_verified_at' => now(), // Email đã được xác thực qua Google
-                    ]);
-                }
-                
-                // Tạo liên kết với tài khoản mạng xã hội
-                SocialAccount::create([
-                    'user_id' => $user->id,
-                    'provider_id' => $googleUser->id,
-                    'provider_name' => 'google'
-                ]);
-            }
-            
-            // Tạo token cho người dùng
-            $token = $user->createToken($user->name);
-            
-            DB::commit();
-            
-            // Trả về thông tin người dùng và token
-            return response()->json([
-                'success' => true,
-                'message' => 'Đăng nhập Google thành công',
-                'data' => [
-                    'user' => $user,
-                    'token' => $token->plainTextToken,
-                    'token_type' => 'Bearer',
-                ]
-            ]);
-        } catch (Exception $e) {
-            DB::rollBack();
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Đăng nhập Google thất bại: ' . $e->getMessage()
-            ], 500);
-        }
     }
 }

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\SportController;
+use App\Http\Controllers\SocialiteController;
 use App\Http\Middleware\AdminMiddleware;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -12,8 +13,11 @@ use Illuminate\Support\Facades\Route;
 // })->middleware('auth:sanctum');
 
 // Routes đăng nhập Google
-Route::get('auth/google', [AuthController::class, 'redirectToGoogle']);
-Route::get('auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
+Route::get('/auth/google', [SocialiteController::class, 'googleLogin']);
+Route::get('/auth/google/callback', [SocialiteController::class, 'googleAuthentication']);
+
+Route::get('/auth/facebook', [SocialiteController::class, 'facebookLogin']);
+Route::get('/auth/facebook/callback', [SocialiteController::class, 'facebookAuthentication']);
 
 // Routes không cần xác thực
 // Auth

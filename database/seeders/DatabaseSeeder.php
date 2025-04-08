@@ -27,7 +27,7 @@ class DatabaseSeeder extends Seeder
 
         User::factory()->create([
             'name' => 'Bùi Quốc Huy',
-            'email' => 'banavip12nt@gmail.com',
+            'email' => 'banavip123nt@gmail.com',
             'password' => '123456',
             'role' => 'customer',
             'avatar' => url('/storage/avatars/default.jpg'),
