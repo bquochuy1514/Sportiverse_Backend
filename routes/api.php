@@ -1,16 +1,13 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\SportController;
 use App\Http\Controllers\SocialiteController;
 use App\Http\Middleware\AdminMiddleware;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-
-// Route::get('/user', function (Request $request) {
-//     return $request->user();
-// })->middleware('auth:sanctum');
 
 // Routes đăng nhập Google
 Route::get('/auth/google', [SocialiteController::class, 'googleLogin']);
@@ -33,11 +30,14 @@ Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{id}', [CategoryController::class, 'show']);
 
 
-
 // Routes cần xác thực
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+
+    // Phần User
+    Route::post('/user/update', [UserController::class, 'update']);
+    Route::post('/user/change-password', [UserController::class, 'changePassword']);
 
     // Chỉ admin mới có quyền
     Route::middleware([AdminMiddleware::class])->group(function () {
