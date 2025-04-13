@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\CouponController;
 use App\Http\Controllers\Api\SportController;
 use App\Http\Controllers\SocialiteController;
 use App\Http\Middleware\AdminMiddleware;
@@ -29,6 +30,9 @@ Route::get('/sports/{id}', [SportController::class, 'show']);
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{id}', [CategoryController::class, 'show']);
 
+// coupon
+Route::get('/coupons/{id}', [CouponController::class, 'show']);
+
 
 // Routes cần xác thực
 Route::middleware('auth:sanctum')->group(function () {
@@ -46,6 +50,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/sports/{id}', [SportController::class, 'update']);
         Route::delete('/sports/{id}', [SportController::class, 'destroy']);
 
+        // Coupon
+        Route::get('/coupons', [CouponController::class, 'index']);
+        Route::post('/coupons', [CouponController::class, 'store']);
+        Route::delete('/coupons/{id}', [CouponController::class, 'destroy']);
 
     });
 });

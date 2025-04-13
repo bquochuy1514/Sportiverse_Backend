@@ -34,10 +34,12 @@ class DatabaseSeeder extends Seeder
             'phone' => '0342637682',
             'address' => '12B Trương Hán Siêu, Nha Trang, Khánh Hòa'
         ]);
+
         
         $this->call([
             SportSeeder::class,
             CategorySeeder::class,
+            CouponSeeder::class,
         ]);
     }
 }
