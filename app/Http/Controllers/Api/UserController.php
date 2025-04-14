@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -49,20 +51,27 @@ class UserController extends Controller
         $user = $request->user();
 
         if ($request->hasFile('avatar')) {
+            // Lưu thông tin avatar hiện tại
+            $currentAvatar = $user->avatar;
+
+            // Lưu avatar mới
             $avatarPath = $request->file('avatar')->store('avatars', 'public');
             $avatarUrl = asset('storage/' . $avatarPath);
             $fields['avatar'] = $avatarUrl;
+
+            // Thử xóa avatar cũ
+            if ($currentAvatar && !str_ends_with($currentAvatar, 'default.jpg')) {
+                $oldAvatarPath = str_replace(asset('storage/'), '', $currentAvatar);
+                Storage::disk('public')->delete($oldAvatarPath);
+            }
         }
 
         $user->update($fields);
-        
+
         return response()->json([
             'status' => true,
-            'message' => 'Cập nhật thành công',
-            'data' => [
-                'user' => $user
-            ],
-            'fields' => $fields
+            'message' => 'Cập nhật thông tin thành công',
+            'user' => $user
         ], 200);
     }
 

@@ -4,10 +4,10 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CouponController;
+use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\SportController;
 use App\Http\Controllers\SocialiteController;
 use App\Http\Middleware\AdminMiddleware;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // Routes đăng nhập Google
@@ -33,6 +33,10 @@ Route::get('/categories/{id}', [CategoryController::class, 'show']);
 // coupon
 Route::get('/coupons/{id}', [CouponController::class, 'show']);
 
+// Product
+Route::get('/products', [ProductController::class, 'index']);
+Route::get('/products/{id}', [ProductController::class, 'show']);
+
 
 // Routes cần xác thực
 Route::middleware('auth:sanctum')->group(function () {
@@ -55,5 +59,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/coupons', [CouponController::class, 'store']);
         Route::delete('/coupons/{id}', [CouponController::class, 'destroy']);
 
+        // Product
+        Route::post('/products', [ProductController::class, 'store']);
+        Route::post('/products/{id}', [ProductController::class, 'update']);
     });
 });

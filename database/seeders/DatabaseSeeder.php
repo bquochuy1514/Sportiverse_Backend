@@ -13,9 +13,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
+        User::create([
             'name' => 'Admin',
             'email' => 'admin@gmail.com',
             'password' => 'admin123',
@@ -25,7 +23,7 @@ class DatabaseSeeder extends Seeder
             'address' => '12B Trương Hán Siêu, Nha Trang, Khánh Hòa'
         ]);
 
-        User::factory()->create([
+        User::create([
             'name' => 'Bùi Quốc Huy',
             'email' => 'banavip123nt@gmail.com',
             'password' => '123456',
