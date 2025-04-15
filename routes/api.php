@@ -29,6 +29,7 @@ Route::get('/sports/{id}', [SportController::class, 'show']);
 // Category
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{id}', [CategoryController::class, 'show']);
+Route::get('/sub-categories', [CategoryController::class, 'getSubCategories']);
 
 // coupon
 Route::get('/coupons/{id}', [CouponController::class, 'show']);
@@ -62,5 +63,6 @@ Route::middleware('auth:sanctum')->group(function () {
         // Product
         Route::post('/products', [ProductController::class, 'store']);
         Route::post('/products/{id}', [ProductController::class, 'update']);
+        Route::delete('/products/{id}', [ProductController::class, 'destroy']);
     });
 });

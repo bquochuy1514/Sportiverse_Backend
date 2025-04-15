@@ -14,13 +14,42 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         User::create([
-            'name' => 'Admin',
+            'name' => 'Admin - Huy',
             'email' => 'admin@gmail.com',
             'password' => 'admin123',
             'role' => 'admin',
             'avatar' => url('/storage/avatars/admin.jpg'),
             'phone' => '0342637682',
             'address' => '12B Trương Hán Siêu, Nha Trang, Khánh Hòa'
+        ]);
+
+        User::create([
+            'name' => 'Admin - Duy',
+            'email' => 'admin2@gmail.com',
+            'password' => 'admin123',
+            'role' => 'admin',
+            'avatar' => url('/storage/avatars/admin.jpg'),
+            'phone' => '0373739519',
+            'address' => 'Bình Sơn - Quảng Ngãi'
+        ]);
+
+        User::create([
+            'name' => 'Admin - Thư',
+            'email' => 'admin3@gmail.com',
+            'password' => 'admin123',
+            'role' => 'admin',
+            'avatar' => url('/storage/avatars/admin.jpg'),
+            'phone' => '',
+            'address' => 'Bình Sơn - Quảng Ngãi'
+        ]);
+
+        User::create([
+            'name' => 'Admin - VAnh',
+            'email' => 'admin4@gmail.com',
+            'password' => 'admin123',
+            'role' => 'admin',
+            'avatar' => url('/storage/avatars/admin.jpg'),
+            'phone' => 'Quảng Trị'
         ]);
 
         User::create([

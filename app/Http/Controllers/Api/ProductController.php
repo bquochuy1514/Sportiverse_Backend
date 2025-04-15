@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\ProductImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -19,7 +20,7 @@ class ProductController extends Controller
      */
     public function index()
     {
-        $products = Product::with('category', 'sport')->get();
+        $products = Product::with('images', 'category')->get();
         return response()->json([
             'status' => true,
             'message' => 'Lấy danh sách sản phẩm thành công',
@@ -42,8 +43,8 @@ class ProductController extends Controller
             'stock_quantity' => 'required|integer|min:0',
             'is_featured' => 'nullable|boolean',
             'is_active' => 'nullable|boolean',
-            'images' => 'nullable|array',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'images' => 'required|nullable|array',
+            'images.*' => 'required|image|mimes:jpeg,png,jpg,gif,svg,webp,avif|max:2048',
             'primary_image_index' => 'nullable|integer|min:0'
         ]);
 
@@ -124,6 +125,7 @@ class ProductController extends Controller
                     'images' => $uploadedImages
                 ]
             ], 201);
+            return 'không có ảnh';
         } catch (\Exception $e) {
             DB::rollBack();
             
@@ -145,12 +147,14 @@ class ProductController extends Controller
         }
     }
 
+
+
     /**
      * Display the specified resource.
      */
     public function show(string $id)
     {
-        $product = Product::with('category', 'sport')->find($id);
+        $product = Product::with('category', 'images')->find($id);
         if (!$product) {
             return response()->json([
                 'status' => false,
@@ -177,6 +181,20 @@ class ProductController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $product = Product::find($id);
+        if (!$product) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Sản phẩm không tồn tại',
+            ], 404);
+        }
+
+        // Xóa sản phẩm
+        $product->delete();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Sản phẩm đã được xóa thành công',
+        ]);
     }
 }

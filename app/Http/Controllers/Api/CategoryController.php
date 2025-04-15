@@ -54,6 +54,43 @@ class CategoryController extends Controller
     }
 
     /**
+     * Get all categories with non-null parent_id.
+    */
+    public function getSubCategories()
+    {
+        try {
+            $subCategories = Category::query();
+            
+            // Lấy các danh mục có parent_id không NULL
+            $subCategories = Category::whereNotNull('parent_id')
+                ->with('parent', 'sport') // Tải quan hệ parent và sport (tùy chọn)
+                ->get();
+
+            // Kiểm tra nếu không có danh mục con
+            if ($subCategories->isEmpty()) {
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Không tìm thấy danh mục con nào',
+                    'data' => []
+                ], 200);
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Lấy danh sách danh mục con thành công',
+                'data' => $subCategories
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Lỗi khi lấy danh mục con: ' . $e->getMessage(),
+                'data' => []
+            ], 500);
+        }
+    }
+
+    /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
