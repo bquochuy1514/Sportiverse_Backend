@@ -65,14 +65,14 @@ class CategoryController extends Controller
             $subCategories = Category::whereNotNull('parent_id')
                 ->with('parent', 'sport') // Tải quan hệ parent và sport (tùy chọn)
                 ->get();
-
+            
             // Kiểm tra nếu không có danh mục con
             if ($subCategories->isEmpty()) {
                 return response()->json([
-                    'status' => true,
+                    'status' => false,
                     'message' => 'Không tìm thấy danh mục con nào',
                     'data' => []
-                ], 200);
+                ], 404);
             }
 
             return response()->json([
@@ -150,7 +150,21 @@ class CategoryController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $category = Category::with('sport')->find($id);
+        
+        // Kiểm tra nếu không có danh mục con
+        if (!$category) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Không tìm thấy danh mục',
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Lấy danh sách danh mục con thành công',
+            'data' => $category
+        ], 200);
     }
 
     /**

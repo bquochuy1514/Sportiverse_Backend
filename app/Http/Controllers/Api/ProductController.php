@@ -164,7 +164,7 @@ class ProductController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Lấy sản phẩm thành công',
-            'data' => $product
+            'data' => $product,
         ]);
     }
 
