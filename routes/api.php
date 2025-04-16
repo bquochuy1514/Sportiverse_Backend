@@ -36,6 +36,7 @@ Route::get('/coupons/{id}', [CouponController::class, 'show']);
 
 // Product
 Route::get('/products', [ProductController::class, 'index']);
+Route::get('/featured-products', [ProductController::class, 'featuredProducts']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
 
 

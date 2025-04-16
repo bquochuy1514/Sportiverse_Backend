@@ -41,6 +41,11 @@ class Product extends Model
         return $this->belongsTo(Category::class);
     }
 
+    public function sport()
+    {
+        return $this->belongsTo(Sport::class);
+    }
+
     /**
      * Get the images for the product.
      */

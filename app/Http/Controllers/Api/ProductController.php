@@ -8,7 +8,6 @@ use App\Models\Product;
 use App\Models\ProductImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -17,16 +16,65 @@ class ProductController extends Controller
 {
     /**
      * Display a listing of the resource.
-     */
-    public function index()
+    */
+    public function index(Request $request)
     {
-        $products = Product::with('images', 'category')->get();
+        // Khởi tạo query builder với các quan hệ cần thiết
+        $query = Product::with('images', 'category', 'sport');
+        
+        // Kiểm tra nếu có category_id được truyền vào
+        if ($request->has('category_id')) {
+            $categoryId = $request->input('category_id');
+            $query->where('category_id', $categoryId);
+        }
+
+        // Thêm các tùy chọn lọc khác (nếu cần)
+        if ($request->has('sport_id')) {
+            $query->where('sport_id', $request->input('sport_id'));
+        }
+
+        if ($request->has('limit')) {
+            $query->take($request->limit);
+        }
+
+        $products = $query->get();
+
         return response()->json([
             'status' => true,
             'message' => 'Lấy danh sách sản phẩm thành công',
             'data' => $products
         ]);
+    }    
+
+    public function featuredProducts(Request $request) {
+        $query = Product::with('images', 'category', 'sport')
+            ->where('is_featured', 1)
+            ->where('is_active', 1);
+
+            // Kiểm tra nếu có category_id được truyền vào
+        if ($request->has('category_id')) {
+            $categoryId = $request->input('category_id');
+            $query->where('category_id', $categoryId);
+        }
+
+        // Thêm các tùy chọn lọc khác (nếu cần)
+        if ($request->has('sport_id')) {
+            $query->where('sport_id', $request->input('sport_id'));
+        }
+
+        if ($request->has('limit')) {
+            $query->take($request->limit);
+        }
+
+        $products = $query->get();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Lấy danh sách sản phẩm nổi bật thành công',
+            'data' => $products
+        ]);
     }
+
 
     /**
      * Store a newly created resource in storage.
@@ -35,6 +83,7 @@ class ProductController extends Controller
     {
         // Validate dữ liệu đầu vào
         $validator = Validator::make($request->all(), [
+            'sport_id' => 'required|exists:categories,id',
             'category_id' => 'required|exists:categories,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -65,6 +114,14 @@ class ProductController extends Controller
             ], 404);
         }
 
+        $sport = Category::find($request->sport_id);
+        if (!$sport) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Sport not found'
+            ], 404);
+        }
+
         // Tạo slug từ tên sản phẩm
         $slug = Str::slug($request->name);
         $originalSlug = $slug;
@@ -82,6 +139,7 @@ class ProductController extends Controller
             // Tạo sản phẩm mới
             $product = new Product();
             $product->category_id = $request->category_id;
+            $product->sport_id = $request->sport_id;
             $product->name = $request->name;
             $product->slug = $slug;
             $product->description = $request->description;
@@ -147,14 +205,15 @@ class ProductController extends Controller
         }
     }
 
-
+    
+    
 
     /**
      * Display the specified resource.
      */
     public function show(string $id)
     {
-        $product = Product::with('category', 'images')->find($id);
+        $product = Product::with('category', 'images', 'sport')->find($id);
         if (!$product) {
             return response()->json([
                 'status' => false,

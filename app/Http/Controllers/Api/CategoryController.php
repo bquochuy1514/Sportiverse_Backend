@@ -90,6 +90,10 @@ class CategoryController extends Controller
         }
     }
 
+    public function test(Request $request) {
+        return 'cc';
+    }
+
     /**
      * Store a newly created resource in storage.
      */
