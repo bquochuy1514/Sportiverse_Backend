@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Sport;
 use App\Models\ProductImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Stevebauman\Purify\Facades\Purify;
 
 class ProductController extends Controller
 {
@@ -20,33 +22,116 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         // Khởi tạo query builder với các quan hệ cần thiết
-        $query = Product::with('images', 'category', 'sport');
+        $query = Product::with(['images', 'category', 'sport']);
         
         // Kiểm tra nếu có category_id được truyền vào
         if ($request->has('category_id')) {
             $categoryId = $request->input('category_id');
             $query->where('category_id', $categoryId);
         }
-
+        
         // Thêm các tùy chọn lọc khác (nếu cần)
         if ($request->has('sport_id')) {
             $query->where('sport_id', $request->input('sport_id'));
         }
-
+        
         if ($request->has('limit')) {
             $query->take($request->limit);
         }
-
+        
         $products = $query->get();
-
+        
+        // Xử lý đường dẫn ảnh cho từng sản phẩm
+        $products->each(function ($product) {
+            // Xử lý ảnh cho bảng images
+            if ($product->images) {
+                $product->images->transform(function ($image) {
+                    if ($image->image_path) {
+                        $image->image_path = url('storage/' . $image->image_path);
+                    }
+                    return $image;
+                });
+            }
+        });
+        
         return response()->json([
             'status' => true,
             'message' => 'Lấy danh sách sản phẩm thành công',
             'data' => $products
         ]);
-    }    
+    }
 
-    public function featuredProducts(Request $request) {
+    public function getProductsThroughSportSlug(Request $request, string $slug) {
+        $sport = Sport::where('slug', $slug)->first();
+
+        if (!$sport) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Không tìm thấy sản phẩm của môn thể thao này',
+                'data' => null
+            ], 404);
+        }
+
+        $query = Product::with(['images', 'category', 'sport'])
+                        ->where('sport_id', $sport->id)
+                        ->where('is_active', true);
+
+        if ($request->has('is_featured')) {
+            $isFeatured = filter_var($request->input('is_featured'), FILTER_VALIDATE_BOOLEAN);
+            $query->where('is_featured', $isFeatured);
+        }
+
+        // Xử lý lọc theo khoảng giá
+        if ($request->has('price_min') && is_numeric($request->input('price_min'))) {
+            $query->where('price', '>=', $request->input('price_min'));
+        }
+
+        if ($request->has('price_max') && is_numeric($request->input('price_max'))) {
+            $query->where('price', '<=', $request->input('price_max'));
+        }
+
+        // Xử lý tìm kiếm theo tên sản phẩm
+        if ($request->has('search')) {
+            $searchTerm = $request->input('search');
+            $query->where('name', 'LIKE', "%{$searchTerm}%");
+        }
+
+        // Xử lý sắp xếp
+        $sortBy = $request->input('sort_by', 'created_at');
+        $sortOrder = $request->input('sort_order', 'desc');
+
+        // Đảm bảo chỉ sắp xếp theo các cột hợp lệ
+        $allowedSortColumns = ['created_at', 'name', 'price', 'sale_price', 'stock_quantity'];
+        if (in_array($sortBy, $allowedSortColumns)) {
+            $query->orderBy($sortBy, $sortOrder === 'asc' ? 'asc' : 'desc');
+        }
+
+        $perPage = $request->input('per_page', 12); // Mặc định 12 sản phẩm mỗi trang
+        $page = $request->input('page', 1);
+
+        $products = $query->paginate($perPage, ['*'], 'page', $page);
+        $total = $products->total();
+
+        // Xử lý đường dẫn ảnh cho từng sản phẩm
+        $products->each(function ($product) {
+            if ($product->images) {
+                $product->images->transform(function ($image) {
+                    if ($image->image_path) {
+                        $image->image_path = url('storage/' . $image->image_path);
+                    }
+                    return $image;
+                });
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'products' => $products
+        ]);
+    }
+
+    public function featuredProducts(Request $request) 
+    {
         $query = Product::with('images', 'category', 'sport')
             ->where('is_featured', 1)
             ->where('is_active', 1);
@@ -67,6 +152,19 @@ class ProductController extends Controller
         }
 
         $products = $query->get();
+        
+        // Xử lý đường dẫn ảnh cho từng sản phẩm
+        $products->each(function ($product) {
+            // Xử lý ảnh cho bảng images
+            if ($product->images) {
+                $product->images->transform(function ($image) {
+                    if ($image->image_path) {
+                        $image->image_path = url('storage/' . $image->image_path);
+                    }
+                    return $image;
+                });
+            }
+        });
 
         return response()->json([
             'status' => true,
@@ -142,7 +240,8 @@ class ProductController extends Controller
             $product->sport_id = $request->sport_id;
             $product->name = $request->name;
             $product->slug = $slug;
-            $product->description = $request->description;
+            // $product->description = $request->description;
+            $product->description = Purify::clean($request->description);
             $product->price = $request->price;
             $product->sale_price = $request->sale_price;
             $product->stock_quantity = $request->stock_quantity;
@@ -161,7 +260,7 @@ class ProductController extends Controller
                     
                     $productImage = new ProductImage();
                     $productImage->product_id = $product->id;
-                    $productImage->image_path = asset('storage/' . $path);
+                    $productImage->image_path = $path;
                     $productImage->is_primary = ($index == $primaryImageIndex) ? 1 : 0;
                     $productImage->save();
                     
@@ -205,21 +304,34 @@ class ProductController extends Controller
         }
     }
 
-    
-    
 
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(string $identifier)
     {
-        $product = Product::with('category', 'images', 'sport')->find($id);
+        // Kiểm tra xem identifier có phải là số (ID) hay không
+        $product = is_numeric($identifier) 
+            ? Product::with('category', 'images', 'sport')->find($identifier)
+            : Product::with('category', 'images', 'sport')->where('slug', $identifier)->first();
+        
+        // Xử lý ảnh cho bảng images
+        if ($product && $product->images) {
+            $product->images->transform(function ($image) {
+                if ($image->image_path) {
+                    $image->image_path = url('storage/' . $image->image_path);
+                }
+                return $image;
+            });
+        }
+
         if (!$product) {
             return response()->json([
                 'status' => false,
                 'message' => 'Sản phẩm không tồn tại',
             ], 404);
         }
+
         return response()->json([
             'status' => true,
             'message' => 'Lấy sản phẩm thành công',
@@ -240,12 +352,21 @@ class ProductController extends Controller
      */
     public function destroy(string $id)
     {
-        $product = Product::find($id);
+        // Tìm sản phẩm với relationship images
+        $product = Product::with('images')->find($id);
+
         if (!$product) {
             return response()->json([
                 'status' => false,
                 'message' => 'Sản phẩm không tồn tại',
             ], 404);
+        }
+
+        // Xóa tất cả các file ảnh từ storage
+        foreach ($product->images as $image) {
+            if (Storage::disk('public')->exists($image->image_path)) {
+                Storage::disk('public')->delete($image->image_path);
+            }
         }
 
         // Xóa sản phẩm

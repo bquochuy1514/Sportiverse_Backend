@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use App\Models\Product;
 
 class CategoryController extends Controller
 {
@@ -88,10 +89,6 @@ class CategoryController extends Controller
                 'data' => []
             ], 500);
         }
-    }
-
-    public function test(Request $request) {
-        return 'cc';
     }
 
     /**

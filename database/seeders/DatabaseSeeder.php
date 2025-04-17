@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@gmail.com',
             'password' => 'admin123',
             'role' => 'admin',
-            'avatar' => url('/storage/avatars/admin.jpg'),
+            'avatar' => 'avatars/admin.jpg',
             'phone' => '0342637682',
             'address' => '12B Trương Hán Siêu, Nha Trang, Khánh Hòa'
         ]);
@@ -28,7 +28,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin2@gmail.com',
             'password' => 'admin123',
             'role' => 'admin',
-            'avatar' => url('/storage/avatars/admin.jpg'),
+            'avatar' => 'avatars/admin.jpg',
             'phone' => '0373739519',
             'address' => 'Bình Sơn - Quảng Ngãi'
         ]);
@@ -38,7 +38,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin3@gmail.com',
             'password' => 'admin123',
             'role' => 'admin',
-            'avatar' => url('/storage/avatars/admin.jpg'),
+            'avatar' => 'avatars/admin.jpg',
             'phone' => '',
             'address' => 'Bình Sơn - Quảng Ngãi'
         ]);
@@ -48,7 +48,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin4@gmail.com',
             'password' => 'admin123',
             'role' => 'admin',
-            'avatar' => url('/storage/avatars/admin.jpg'),
+            'avatar' => 'avatars/admin.jpg',
             'phone' => 'Quảng Trị'
         ]);
 
@@ -57,7 +57,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'banavip123nt@gmail.com',
             'password' => '123456',
             'role' => 'customer',
-            'avatar' => url('/storage/avatars/default.jpg'),
+            'avatar' => 'avatars/default.jpg',
             'phone' => '0342637682',
             'address' => '12B Trương Hán Siêu, Nha Trang, Khánh Hòa'
         ]);

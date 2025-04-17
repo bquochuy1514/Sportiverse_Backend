@@ -30,9 +30,11 @@ class AuthController extends Controller
                 'address' => 'nullable|string',
             ]);
 
-            $fields['avatar'] = url('/storage/avatars/default.jpg');
+            $fields['avatar'] = 'avatars/default.jpg';
 
             $user = User::create($fields);
+
+            $user->avatar = url('storage/' . $user->avatar);
 
             return response()->json([
                 'success' => true,
@@ -99,6 +101,8 @@ class AuthController extends Controller
                 ], 401);
             }
 
+            $user->avatar = url('storage/' . $user->avatar);
+
             // Xác định thời hạn token dựa vào "remember me"
             $tokenExpiration = $request->remember ? now()->addMonths(6) : now()->addDay();
             
@@ -152,6 +156,11 @@ class AuthController extends Controller
      */
     public function me(Request $request)
     {
+        $user = $request->user();
+        // Kiểm tra xem avatar có phải là URL đầy đủ không
+        if ($user->avatar && !filter_var($user->avatar, FILTER_VALIDATE_URL)) {
+            $user->avatar = url('storage/' . $user->avatar);
+        }
         return response()->json([
             'success' => true,
             'data' => [

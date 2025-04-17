@@ -16,18 +16,22 @@ class SportController extends Controller
     public function index(Request $request)
     {
         $query = Sport::query();
-        
-        // Tìm kiếm theo tên nếu có tham số
-        if ($request->has('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
-        }
-        
+
         // Sắp xếp
-        $query->orderBy($request->get('sort_by', 'name'), $request->get('sort_direction', 'asc'));
-        
+        $query->orderBy($request->get('sort_by', 'id'), $request->get('sort_direction', 'asc'));
+
         // Lấy tất cả dữ liệu
         $sports = $query->get();
-        
+
+        // Xử lý đường dẫn icon cho từng bản ghi
+        $sports->transform(function ($sport) {
+            if ($sport->icon) {
+                // Thêm domain vào đường dẫn icon
+                $sport->icon = url('storage/' . $sport->icon);
+            }
+            return $sport;
+        });
+
         return response()->json([
             'success' => true,
             'data' => $sports
@@ -46,7 +50,7 @@ class SportController extends Controller
                 'name' => 'required|string|max:255',
                 'slug' => 'nullable|string|max:255|unique:sports',
                 'icon' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-                'description' => 'required|nullable|string',
+                'description' => 'nullable|string',
                 'is_active' => 'nullable|boolean',
             ]);
 
@@ -66,7 +70,7 @@ class SportController extends Controller
                 Storage::disk('public')->putFileAs('sports', $iconFile, $filename);
                 
                 // Lưu đường dẫn vào database
-                $fields['icon'] = $filename;
+                $fields['icon'] = 'sports/' . $filename;
             }
 
             // Tạo môn thể thao mới
@@ -79,11 +83,11 @@ class SportController extends Controller
             ], 201);
         } 
         catch (\Illuminate\Validation\ValidationException $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Lỗi xác thực dữ liệu',
-            'errors' => $e->errors()
-        ], 422);
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi xác thực dữ liệu',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

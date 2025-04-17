@@ -38,6 +38,7 @@ Route::get('/coupons/{id}', [CouponController::class, 'show']);
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/featured-products', [ProductController::class, 'featuredProducts']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
+Route::get('/products-categories/{category_slug}', [ProductController::class, 'getProductsThroughSportSlug']);
 
 
 // Routes cần xác thực
@@ -51,6 +52,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Chỉ admin mới có quyền
     Route::middleware([AdminMiddleware::class])->group(function () {
+        // Routes cho người dùng
+        Route::get('/users', [UserController::class, 'index']);
+
         // Routes cho môn thể thao
         Route::post('/sports', [SportController::class, 'store']);
         Route::post('/sports/{id}', [SportController::class, 'update']);

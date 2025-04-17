@@ -8,7 +8,6 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -17,7 +16,17 @@ class UserController extends Controller
      */
     public function index()
     {
-        //
+        $users = User::all();
+
+        $users->each(function ($user) {
+            $user->avatar = $user->avatar ? url('storage/' . $user->avatar) : url('storage/avatars/default.jpg');
+        });
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Lấy danh sách người dùng thành công',
+            'users' => $users
+        ], 200);
     }
 
     /**
@@ -56,17 +65,32 @@ class UserController extends Controller
 
             // Lưu avatar mới
             $avatarPath = $request->file('avatar')->store('avatars', 'public');
-            $avatarUrl = asset('storage/' . $avatarPath);
-            $fields['avatar'] = $avatarUrl;
+            $fields['avatar'] = $avatarPath;
 
-            // Thử xóa avatar cũ
-            if ($currentAvatar && !str_ends_with($currentAvatar, 'default.jpg')) {
-                $oldAvatarPath = str_replace(asset('storage/'), '', $currentAvatar);
-                Storage::disk('public')->delete($oldAvatarPath);
+            // Thử xóa avatar cũ nếu không phải là avatar mặc định
+            if ($currentAvatar) {
+                $defaultAvatars = ['avatars/default.jpg', 'avatars/admin.jpg'];
+                
+                // Kiểm tra xem avatar hiện tại có phải là mặc định không
+                $isDefaultAvatar = false;
+                foreach ($defaultAvatars as $defaultAvatar) {
+                    if (str_ends_with($currentAvatar, $defaultAvatar)) {
+                        $isDefaultAvatar = true;
+                        break;
+                    }
+                }
+                
+                // Nếu không phải avatar mặc định thì xóa
+                if (!$isDefaultAvatar) {
+                    Storage::disk('public')->delete($currentAvatar);
+                }
             }
         }
 
         $user->update($fields);
+
+        // Cập nhật đường dẫn avatar với domain
+        $user->avatar = $user->avatar ? url('storage/' . $user->avatar) : url('storage/avatars/default.jpg');
 
         return response()->json([
             'status' => true,

@@ -32,18 +32,6 @@ class Sport extends Model
             if (empty($sport->slug)) {
                 $sport->slug = Str::slug($sport->name);
             }
-
-            // Thêm domain vào icon nếu chưa có
-            if ($sport->icon && !Str::startsWith($sport->icon, ['http://', 'https://'])) {
-                $sport->icon = 'http://localhost:8000/storage/sports/' . $sport->icon;
-            }
-        });
-
-        static::updating(function ($sport) {
-            // Thêm domain vào icon nếu chưa có
-            if ($sport->icon && !Str::startsWith($sport->icon, ['http://', 'https://'])) {
-                $sport->icon = 'http://localhost:8000/storage/sports/' . $sport->icon;
-            }
         });
     }
 
