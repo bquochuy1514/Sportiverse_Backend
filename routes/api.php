@@ -6,9 +6,13 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CouponController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\SportController;
+use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\SocialiteController;
 use App\Http\Middleware\AdminMiddleware;
 use Illuminate\Support\Facades\Route;
+
+
+Route::get('/test', [ProductController::class, 'test']);
 
 // Routes đăng nhập Google
 Route::get('/auth/google', [SocialiteController::class, 'googleLogin']);
@@ -36,6 +40,7 @@ Route::get('/coupons/{id}', [CouponController::class, 'show']);
 
 // Product
 Route::get('/products', [ProductController::class, 'index']);
+Route::get('/products-sale', [ProductController::class, 'index2']);
 Route::get('/featured-products', [ProductController::class, 'featuredProducts']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
 Route::get('/products-categories/{category_slug}', [ProductController::class, 'getProductsThroughSportSlug']);
@@ -50,6 +55,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/user/update', [UserController::class, 'update']);
     Route::post('/user/change-password', [UserController::class, 'changePassword']);
 
+    // Phần Cart
+    Route::post('/cart/add', [CartController::class, 'store']);
+    Route::get('/my-cart', [CartController::class, 'show']);
+    Route::delete('/cart/remove/{id}', [CartController::class, 'destroy']);
+    Route::put('/cart/update/{id}', [CartController::class, 'update']);
+    
     // Chỉ admin mới có quyền
     Route::middleware([AdminMiddleware::class])->group(function () {
         // Routes cho người dùng
@@ -67,7 +78,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Product
         Route::post('/products', [ProductController::class, 'store']);
-        Route::post('/products/{id}', [ProductController::class, 'update']);
+        Route::put('/products/{id}', [ProductController::class, 'update']);
         Route::delete('/products/{id}', [ProductController::class, 'destroy']);
     });
 });

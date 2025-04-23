@@ -15,7 +15,8 @@ class CategoryController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Category::query();
+        $query = Category::query()
+                ->with('sport', 'parent');
         
         // Lọc theo môn thể thao
         if ($request->has('sport_id')) {
@@ -29,7 +30,12 @@ class CategoryController extends Controller
             // Chỉ lấy danh mục gốc (không có parent)
             $query->whereNull('parent_id');
         }
-        
+
+        // Điều kiện mới: Lọc các danh mục có parent
+        if ($request->boolean('has_parent', false)) {
+            $query->whereNotNull('parent_id');
+        }
+            
         // Lọc theo trạng thái active
         if ($request->has('active')) {
             $query->where('is_active', $request->boolean('active'));

@@ -33,6 +33,19 @@ class Product extends Model
         'deleted_at' => 'datetime',
     ];
 
+    public function getPrimaryImage()
+    {
+        // Lọc mảng images để tìm ảnh chính
+        $primaryImage = $this->images->where('is_primary', 1)->first();
+        
+        // Nếu không có ảnh chính, lấy ảnh đầu tiên (nếu có)
+        if (!$primaryImage && $this->images->count() > 0) {
+            $primaryImage = $this->images->first();
+        }
+        
+        return $primaryImage->image_path;
+    }
+
     /**
      * Get the category that owns the product.
     */

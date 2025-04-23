@@ -24,21 +24,110 @@ class ProductController extends Controller
         // Khởi tạo query builder với các quan hệ cần thiết
         $query = Product::with(['images', 'category', 'sport']);
         
-        // Kiểm tra nếu có category_id được truyền vào
+        // Xử lý nhiều category_id
         if ($request->has('category_id')) {
-            $categoryId = $request->input('category_id');
-            $query->where('category_id', $categoryId);
+            $categoryIds = is_array($request->category_id) 
+                ? $request->category_id 
+                : explode(',', $request->input('category_id'));
+                
+            $query->whereIn('category_id', $categoryIds);
         }
         
-        // Thêm các tùy chọn lọc khác (nếu cần)
+        // Xử lý nhiều sport_id
         if ($request->has('sport_id')) {
-            $query->where('sport_id', $request->input('sport_id'));
+            $sportIds = is_array($request->sport_id) 
+                ? $request->sport_id 
+                : explode(',', $request->input('sport_id'));
+                
+            $query->whereIn('sport_id', $sportIds);
         }
         
         if ($request->has('limit')) {
             $query->take($request->limit);
         }
+
+        if($request->has('search')) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        if($request->has('min_price')) {
+            $query->where('price', '>=', $request->min_price);
+        }
+
+        if($request->has('max_price')) {
+            $query->where('price', '<=', $request->max_price);
+        }
+
+        $sortBy = $request->get('sort_by', 'name');
+        $sortDirection = $request->get('sort_direction', 'asc');
+        $query->orderBy($sortBy, $sortDirection);
+
+        $products = $query->get();
         
+        // Xử lý đường dẫn ảnh cho từng sản phẩm
+        $products->each(function ($product) {
+            // Xử lý ảnh cho bảng images
+            if ($product->images) {
+                $product->images->transform(function ($image) {
+                    if ($image->image_path) {
+                        $image->image_path = url('storage/' . $image->image_path);
+                    }
+                    return $image;
+                });
+            }
+        });
+        
+        return response()->json([
+            'status' => true,
+            'message' => 'Lấy danh sách sản phẩm thành công',
+            'data' => $products
+        ]);
+    }
+
+    public function index2(Request $request)
+    {
+        // Khởi tạo query builder với các quan hệ cần thiết
+        $query = Product::with(['images', 'category', 'sport'])
+                        ->where('sale_price', '>', 0);
+        
+        // Xử lý nhiều category_id
+        if ($request->has('category_id')) {
+            $categoryIds = is_array($request->category_id) 
+                ? $request->category_id 
+                : explode(',', $request->input('category_id'));
+                
+            $query->whereIn('category_id', $categoryIds);
+        }
+        
+        // Xử lý nhiều sport_id
+        if ($request->has('sport_id')) {
+            $sportIds = is_array($request->sport_id) 
+                ? $request->sport_id 
+                : explode(',', $request->input('sport_id'));
+                
+            $query->whereIn('sport_id', $sportIds);
+        }
+        
+        if ($request->has('limit')) {
+            $query->take($request->limit);
+        }
+
+        if($request->has('search')) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        if($request->has('min_price')) {
+            $query->where('price', '>=', $request->min_price);
+        }
+
+        if($request->has('max_price')) {
+            $query->where('price', '<=', $request->max_price);
+        }
+
+        $sortBy = $request->get('sort_by', 'name');
+        $sortDirection = $request->get('sort_direction', 'asc');
+        $query->orderBy($sortBy, $sortDirection);
+
         $products = $query->get();
         
         // Xử lý đường dẫn ảnh cho từng sản phẩm
@@ -173,7 +262,6 @@ class ProductController extends Controller
         ]);
     }
 
-
     /**
      * Store a newly created resource in storage.
      */
@@ -304,6 +392,9 @@ class ProductController extends Controller
         }
     }
 
+    public function test() {
+        return env('FRONTEND_URL');
+    }
 
     /**
      * Display the specified resource.
@@ -342,9 +433,102 @@ class ProductController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, string $productId)
     {
-        //
+        // Validate dữ liệu đầu vào
+        $validator = Validator::make($request->all(), [
+            'sport_id' => 'required|exists:categories,id',
+            'category_id' => 'required|exists:categories,id',
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'price' => 'required|numeric|min:0',
+            'sale_price' => 'nullable|numeric|min:0|lt:price',
+            'stock_quantity' => 'required|integer|min:0',
+            'is_featured' => 'nullable|boolean',
+            'is_active' => 'nullable|boolean'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Tìm sản phẩm
+        $product = Product::find($productId);
+        if (!$product) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Sản phẩm không tồn tại'
+            ], 404);
+        }
+
+        // Kiểm tra category và sport
+        $category = Category::find($request->category_id);
+        if (!$category) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Danh mục không tồn tại'
+            ], 404);
+        }
+
+        $sport = Category::find($request->sport_id);
+        if (!$sport) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Môn thể thao không tồn tại'
+            ], 404);
+        }
+
+        // Tạo slug mới nếu tên thay đổi
+        $slug = $product->slug;
+        if ($product->name !== $request->name) {
+            $slug = Str::slug($request->name);
+            $originalSlug = $slug;
+            $count = 1;
+
+            // Đảm bảo slug là duy nhất
+            while (Product::where('slug', $slug)->where('id', '!=', $product->id)->exists()) {
+                $slug = $originalSlug . '-' . $count;
+                $count++;
+            }
+        }
+
+        DB::beginTransaction();
+
+        try {
+            // Cập nhật thông tin sản phẩm
+            $product->category_id = $request->category_id;
+            $product->sport_id = $request->sport_id;
+            $product->name = $request->name;
+            $product->slug = $slug;
+            $product->description = Purify::clean($request->description);
+            $product->price = $request->price;
+            $product->sale_price = $request->sale_price;
+            $product->stock_quantity = $request->stock_quantity;
+            $product->is_featured = $request->is_featured ?? 0;
+            $product->is_active = $request->is_active ?? 1;
+            $product->save();
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Sản phẩm đã được cập nhật thành công',
+                'data' => $product
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return response()->json([
+                'status' => false,
+                'message' => 'Đã xảy ra lỗi khi cập nhật sản phẩm',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
