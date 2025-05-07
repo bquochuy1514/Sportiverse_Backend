@@ -35,8 +35,6 @@ Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{id}', [CategoryController::class, 'show']);
 Route::get('/sub-categories', [CategoryController::class, 'getSubCategories']);
 
-// coupon
-Route::get('/coupons/{id}', [CouponController::class, 'show']);
 
 // Product
 Route::get('/products', [ProductController::class, 'index']);
@@ -73,6 +71,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Coupon
         Route::get('/coupons', [CouponController::class, 'index']);
+        Route::get('/coupons/{id}', [CouponController::class, 'show']);
         Route::post('/coupons', [CouponController::class, 'store']);
         Route::delete('/coupons/{id}', [CouponController::class, 'destroy']);
 
