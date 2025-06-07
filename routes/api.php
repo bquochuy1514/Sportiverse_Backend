@@ -7,6 +7,9 @@ use App\Http\Controllers\Api\CouponController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\SportController;
 use App\Http\Controllers\Api\CartController;
+use App\Http\Controllers\Api\OrderController; 
+use App\Http\Controllers\Api\ForgotPasswordController;
+use App\Http\Controllers\Api\ResetPasswordController;
 use App\Http\Controllers\SocialiteController;
 use App\Http\Middleware\AdminMiddleware;
 use Illuminate\Support\Facades\Route;
@@ -25,6 +28,9 @@ Route::get('/auth/facebook/callback', [SocialiteController::class, 'facebookAuth
 // Auth
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+// Reset Password
+Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail']);;
+Route::post('/reset-password', [ResetPasswordController::class, 'reset'])->name('password.reset');
 
 // Sport
 Route::get('/sports', [SportController::class, 'index']);
@@ -58,6 +64,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/my-cart', [CartController::class, 'show']);
     Route::delete('/cart/remove/{id}', [CartController::class, 'destroy']);
     Route::put('/cart/update/{id}', [CartController::class, 'update']);
+
+    // Order routes
+    Route::post('/orders', [OrderController::class, 'store']);
+    Route::get('/orders', [OrderController::class, 'index']);
+    Route::get('/orders/{id}', [OrderController::class, 'show']);
+    Route::put('/orders/{id}/cancel', [OrderController::class, 'cancel']);
+
+    // Coupon
+    Route::post('/check-coupon', [CouponController::class, 'checkCoupon']);
+    Route::get('/coupons/{id}', [CouponController::class, 'show']);
     
     // Chỉ admin mới có quyền
     Route::middleware([AdminMiddleware::class])->group(function () {
@@ -69,9 +85,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/sports/{id}', [SportController::class, 'update']);
         Route::delete('/sports/{id}', [SportController::class, 'destroy']);
 
-        // Coupon
+        Route::get('/orders', [OrderController::class, 'adminIndex']);
+        Route::put('/orders/{id}/status', [OrderController::class, 'updateStatus']);
+
+        // Coupon admin routes
         Route::get('/coupons', [CouponController::class, 'index']);
-        Route::get('/coupons/{id}', [CouponController::class, 'show']);
         Route::post('/coupons', [CouponController::class, 'store']);
         Route::delete('/coupons/{id}', [CouponController::class, 'destroy']);
 

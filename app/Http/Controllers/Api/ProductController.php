@@ -46,8 +46,18 @@ class ProductController extends Controller
             $query->take($request->limit);
         }
 
-        if($request->has('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                  ->orWhere('description', 'like', '%' . $search . '%')
+                  ->orWhereHas('category', function ($q) use ($search) {
+                      $q->where('name', 'like', '%' . $search . '%');
+                  })
+                  ->orWhereHas('sport', function ($q) use ($search) {
+                      $q->where('name', 'like', '%' . $search . '%');
+                  });
+            });
         }
 
         if($request->has('min_price')) {
@@ -165,41 +175,7 @@ class ProductController extends Controller
                         ->where('sport_id', $sport->id)
                         ->where('is_active', true);
 
-        if ($request->has('is_featured')) {
-            $isFeatured = filter_var($request->input('is_featured'), FILTER_VALIDATE_BOOLEAN);
-            $query->where('is_featured', $isFeatured);
-        }
-
-        // Xử lý lọc theo khoảng giá
-        if ($request->has('price_min') && is_numeric($request->input('price_min'))) {
-            $query->where('price', '>=', $request->input('price_min'));
-        }
-
-        if ($request->has('price_max') && is_numeric($request->input('price_max'))) {
-            $query->where('price', '<=', $request->input('price_max'));
-        }
-
-        // Xử lý tìm kiếm theo tên sản phẩm
-        if ($request->has('search')) {
-            $searchTerm = $request->input('search');
-            $query->where('name', 'LIKE', "%{$searchTerm}%");
-        }
-
-        // Xử lý sắp xếp
-        $sortBy = $request->input('sort_by', 'created_at');
-        $sortOrder = $request->input('sort_order', 'desc');
-
-        // Đảm bảo chỉ sắp xếp theo các cột hợp lệ
-        $allowedSortColumns = ['created_at', 'name', 'price', 'sale_price', 'stock_quantity'];
-        if (in_array($sortBy, $allowedSortColumns)) {
-            $query->orderBy($sortBy, $sortOrder === 'asc' ? 'asc' : 'desc');
-        }
-
-        $perPage = $request->input('per_page', 12); // Mặc định 12 sản phẩm mỗi trang
-        $page = $request->input('page', 1);
-
-        $products = $query->paginate($perPage, ['*'], 'page', $page);
-        $total = $products->total();
+        $products = $query->get();
 
         // Xử lý đường dẫn ảnh cho từng sản phẩm
         $products->each(function ($product) {
@@ -214,8 +190,8 @@ class ProductController extends Controller
         });
 
         return response()->json([
-            'success' => true,
-            'products' => $products
+                'success' => true,
+                'products' => $products
         ]);
     }
 

@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use App\Notifications\ResetPasswordNotification;
+
 
 class User extends Authenticatable
 {
@@ -17,7 +19,7 @@ class User extends Authenticatable
      * The attributes that are mass assignable.
      *
      * @var list<string>
-     */
+    */
     protected $fillable = [
         'name',
         'email',
@@ -32,7 +34,7 @@ class User extends Authenticatable
      * The attributes that should be hidden for serialization.
      *
      * @var list<string>
-     */
+    */
     protected $hidden = [
         'password',
         'remember_token',
@@ -73,5 +75,9 @@ class User extends Authenticatable
     public function cart()
     {
         return $this->hasOne(Cart::class);
+    }
+
+    public function sendPasswordResetNotification($token) {
+        $this->notify(new ResetPasswordNotification($token));
     }
 }

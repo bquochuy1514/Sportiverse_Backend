@@ -9,19 +9,45 @@ use Illuminate\Support\Facades\Validator;
 
 class CouponController extends Controller
 {
+    // Kiểm tra mã giảm giá
+    public function checkCoupon(Request $request)
+    {
+        $coupon = Coupon::where('code', $request->coupon_code)->first();
+        
+        if (!$coupon) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Mã giảm giá không tồn tại'
+            ]);
+        }
+
+        $orderAmount = $request->order_amount;
+        
+        if (!$coupon->isValid($orderAmount)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Mã giảm giá không hợp lệ hoặc đơn hàng chưa đủ điều kiện'
+            ]);
+        }
+
+        $discount = $coupon->calculateDiscount($orderAmount);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Áp dụng mã giảm giá thành công',
+            'discount_amount' => $discount,
+            'final_amount' => $orderAmount - $discount,
+            'coupon_id' => $coupon->id
+        ]);
+    }
+
+
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request)
+    public function index()
     {
-        $coupons = Coupon::query()
-            ->when($request->has('is_active'), function ($query) use ($request) {
-                $query->where('is_active', $request->is_active);
-            })
-            ->when($request->has('type'), function ($query) use ($request) {
-                $query->where('type', $request->type);
-            })
-            ->get();
+        $coupons = Coupon::orderBy('created_at', 'desc')->get();
 
         return response()->json([
             'success' => true,
@@ -30,40 +56,22 @@ class CouponController extends Controller
         ], 200);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
+    // Tạo mã giảm giá mới
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'code' => 'required|string|max:50|unique:coupons',
+        $request->validate([
+            'code' => 'required|unique:coupons',
             'type' => 'required|in:percentage,fixed',
-            'value' => 'required|numeric|min:0',
-            'min_order_amount' => 'nullable|numeric|min:0',
-            'max_discount_amount' => 'nullable|numeric|min:0',
-            'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
-            'usage_limit' => 'nullable|integer|min:1',
-            'is_active' => 'boolean',
+            'value' => 'required|numeric|min:0'
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Dữ liệu đầu vào không hợp lệ.',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        $data = $validator->validated();
-
-        $coupon = Coupon::create($data);
-
+        $coupon = Coupon::create($request->all());
+        
         return response()->json([
             'success' => true,
             'message' => 'Tạo mã giảm giá thành công',
-            'coupon' => $coupon
-        ], 201);
+            'data' => $coupon
+        ]);
     }
 
     /**
@@ -85,32 +93,13 @@ class CouponController extends Controller
         ], 200);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
+    // Xóa mã giảm giá
+    public function destroy($id)
     {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        $coupon = Coupon::find($id);
-        if (!$coupon) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Mã giảm giá không tồn tại',
-            ], 404);
-        }
-
-        $coupon->delete();
-
+        Coupon::find($id)->delete();
         return response()->json([
-            'success' => true,
-            'message' => 'Xóa mã giảm giá thành công',
-        ], 200);
+            'success' => true, 
+            'message' => 'Đã xóa mã giảm giá thành công'
+        ]);
     }
 }
