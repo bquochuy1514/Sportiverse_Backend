@@ -20,6 +20,10 @@ class Coupon extends Model
         'is_active'
     ];
 
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
+
     // Kiểm tra mã có hợp lệ không
     public function isValid($orderAmount = 0)
     {

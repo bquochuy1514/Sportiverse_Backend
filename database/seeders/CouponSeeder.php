@@ -18,11 +18,6 @@ class CouponSeeder extends Seeder
             'type' => 'percentage',
             'value' => 20.00,
             'min_order_amount' => 100.00,
-            'max_discount_amount' => 50.00,
-            'start_date' => '2025-04-15',
-            'end_date' => '2025-06-30',
-            'usage_limit' => 20,
-            'used_count' => 0,
             'is_active' => true,
         ]);
 
@@ -31,11 +26,6 @@ class CouponSeeder extends Seeder
             'type' => 'fixed',
             'value' => 30.00,
             'min_order_amount' => 150.00,
-            'max_discount_amount' => null,
-            'start_date' => '2025-05-01',
-            'end_date' => '2025-07-31',
-            'usage_limit' => 30,
-            'used_count' => 0,
             'is_active' => true,
         ]);
 
@@ -45,11 +35,6 @@ class CouponSeeder extends Seeder
                 'type' => $i % 2 == 0 ? 'percentage' : 'fixed',
                 'value' => $i * 10.00,
                 'min_order_amount' => $i * 50.00,
-                'max_discount_amount' => $i % 2 == 0 ? $i * 20.00 : null,
-                'start_date' => now()->addDays($i),
-                'end_date' => now()->addMonths($i),
-                'usage_limit' => 100 + $i * 10,
-                'used_count' => 0,
                 'is_active' => true,
             ]);
         }

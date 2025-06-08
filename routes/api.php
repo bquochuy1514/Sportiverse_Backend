@@ -64,15 +64,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/my-cart', [CartController::class, 'show']);
     Route::delete('/cart/remove/{id}', [CartController::class, 'destroy']);
     Route::put('/cart/update/{id}', [CartController::class, 'update']);
+    Route::get('/cart/count',  [CartController::class, 'countItems']);
 
     // Order routes
-    Route::post('/orders', [OrderController::class, 'store']);
-    Route::get('/orders', [OrderController::class, 'index']);
+    Route::post('/orders', [OrderController::class, 'placeOrder']);
+    Route::get('/orders', [OrderController::class, 'getUserOrders']);
     Route::get('/orders/{id}', [OrderController::class, 'show']);
     Route::put('/orders/{id}/cancel', [OrderController::class, 'cancel']);
 
     // Coupon
-    Route::post('/check-coupon', [CouponController::class, 'checkCoupon']);
+    Route::post('/coupons/apply', [CouponController::class, 'applyCoupon']);
     Route::get('/coupons/{id}', [CouponController::class, 'show']);
     
     // Chỉ admin mới có quyền
@@ -84,9 +85,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/sports', [SportController::class, 'store']);
         Route::post('/sports/{id}', [SportController::class, 'update']);
         Route::delete('/sports/{id}', [SportController::class, 'destroy']);
-
-        Route::get('/orders', [OrderController::class, 'adminIndex']);
-        Route::put('/orders/{id}/status', [OrderController::class, 'updateStatus']);
 
         // Coupon admin routes
         Route::get('/coupons', [CouponController::class, 'index']);

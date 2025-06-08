@@ -14,6 +14,11 @@ class OrderItem extends Model
         'subtotal'
     ];
 
+    protected $casts = [
+        'unit_price' => 'decimal:2',
+        'subtotal' => 'decimal:2',
+    ];
+
     // Relationships
     public function order()
     {

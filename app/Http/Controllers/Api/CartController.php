@@ -315,4 +315,36 @@ class CartController extends Controller
             'data' => $formattedCart
         ]);
     }
+
+    public function countItems() {
+        try {
+            $cart = Cart::where('user_id', Auth::id())->first();
+
+            // Nếu không có giỏ hàng, trả về số lượng 0
+            if (!$cart) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'item_count' => 0
+                    ]
+                ], 200);
+            }
+
+            $itemCount = $cart->items()->sum('quantity');
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'item_count' => $itemCount
+                ]
+            ]);
+        }
+        catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Đã xảy ra lỗi khi lấy tổng số sản phẩm trong giỏ hàng',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

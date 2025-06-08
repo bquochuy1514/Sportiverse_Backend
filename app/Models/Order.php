@@ -10,13 +10,17 @@ class Order extends Model
         'user_id',
         'status',
         'total_amount',
-        'shipping_name',
-        'shipping_phone',
         'shipping_address',
-        'payment_status',
-        'notes',
+        'shipping_phone',
+        'shipping_name',
         'coupon_id',
-        'discount_amount'
+        'discount_amount',
+    ];
+
+    protected $casts = [
+        'status' => 'string',
+        'total_amount' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
     ];
 
     // Relationships
@@ -33,11 +37,5 @@ class Order extends Model
     public function orderItems()
     {
         return $this->hasMany(OrderItem::class);
-    }
-
-    // Tính tổng tiền trước khi giảm giá
-    public function getSubtotalAttribute()
-    {
-        return $this->total_amount + $this->discount_amount;
     }
 }
