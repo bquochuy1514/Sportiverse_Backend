@@ -112,6 +112,56 @@ class CouponController extends Controller
         ], 201);
     }
 
+    public function update(Request $request, string $id)
+    {
+        $coupon = Coupon::find($id);
+
+        if (!$coupon) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Mã giảm giá không tồn tại',
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'code' => 'required|string|max:50|unique:coupons,code,' . $id,
+            'type' => 'required|in:percentage,fixed',
+            'value' => 'required|numeric|min:0',
+            'min_order_amount' => 'required|numeric|min:0',
+            'is_active' => 'boolean'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Dữ liệu không hợp lệ',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        // Validation bổ sung
+        if ($request->type === 'percentage' && $request->value > 100) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Phần trăm giảm giá không được vượt quá 100%',
+            ], 422);
+        }
+
+        $coupon->update([
+            'code' => strtoupper(trim($request->code)),
+            'type' => $request->type,
+            'value' => $request->value,
+            'min_order_amount' => $request->min_order_amount,
+            'is_active' => $request->input('is_active', $coupon->is_active),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Cập nhật mã giảm giá thành công',
+            'data' => $coupon->fresh(),
+        ], 200);
+    }
+
     /**
      * Xóa mã giảm giá
      */

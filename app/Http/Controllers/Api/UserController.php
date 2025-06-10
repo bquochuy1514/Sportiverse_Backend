@@ -14,12 +14,23 @@ class UserController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::all();
+        $query = User::query();
+
+        // Filter by role if provided
+        if ($request->has('role')) {
+            $query->where('role', $request->role);
+        }
+
+        if($request->has('search')) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        $users = $query->get();
 
         $users->each(function ($user) {
-            $user->avatar = $user->avatar ? url('storage/' . $user->avatar) : url('storage/avatars/default.jpg');
+            $user->avatar = str_starts_with($user->avatar, 'http') ? $user->avatar : url('storage/' . $user->avatar);
         });
 
         return response()->json([
@@ -27,22 +38,6 @@ class UserController extends Controller
             'message' => 'Lấy danh sách người dùng thành công',
             'users' => $users
         ], 200);
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-       
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
     }
 
     /**
@@ -99,13 +94,49 @@ class UserController extends Controller
         ], 200);
     }
 
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
+    
+    public function updateRole(Request $request, $id)
     {
-        //
+        // Validate the request
+        $request->validate([
+            'role' => 'required|string|in:admin,customer',
+        ]);
+
+        // Get the authenticated user
+        $authUser = Auth::user();
+
+        // Find the user to update
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Người dùng không tồn tại.'
+            ], 404);
+        }
+
+        // Prevent admin from updating their own role
+        if ($user->id === $authUser->id) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Không thể cập nhật vai trò của chính bạn.'
+            ], 403);
+        }
+
+        // Update the user's role
+        $user->role = $request->role;
+        $user->save();
+
+        // Transform avatar URL for consistency
+        $user->avatar = str_starts_with($user->avatar, 'http') 
+            ? $user->avatar 
+            : url('storage/' . $user->avatar);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Cập nhật vai trò người dùng thành công.',
+            'user' => $user
+        ], 200);
     }
 
     public function changePassword(Request $request)
@@ -128,6 +159,52 @@ class UserController extends Controller
 
         return response()->json([
             'message' => 'Đổi mật khẩu thành công.',
+        ], 200);
+    }
+
+    public function destroy($id)
+    {
+        // Find the user to delete
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Người dùng không tồn tại.'
+            ], 404);
+        }
+
+        // Prevent admin from deleting their own account
+        if ($user->role == 'admin') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Không thể xóa tài khoản của admin.'
+            ], 403);
+        }
+
+        // Delete the user's avatar if it's not a default avatar
+        if ($user->avatar) {
+            $defaultAvatars = ['avatars/default.jpg', 'avatars/admin.jpg'];
+            $isDefaultAvatar = false;
+
+            foreach ($defaultAvatars as $defaultAvatar) {
+                if (str_ends_with($user->avatar, $defaultAvatar)) {
+                    $isDefaultAvatar = true;
+                    break;
+                }
+            }
+
+            if (!$isDefaultAvatar) {
+                Storage::disk('public')->delete($user->avatar);
+            }
+        }
+
+        // Delete the user
+        $user->delete();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Xóa người dùng thành công.'
         ], 200);
     }
 }

@@ -69,8 +69,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // Order routes
     Route::post('/orders', [OrderController::class, 'placeOrder']);
     Route::get('/orders', [OrderController::class, 'getUserOrders']);
-    Route::get('/orders/{id}', [OrderController::class, 'show']);
-    Route::put('/orders/{id}/cancel', [OrderController::class, 'cancel']);
 
     // Coupon
     Route::post('/coupons/apply', [CouponController::class, 'applyCoupon']);
@@ -80,6 +78,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware([AdminMiddleware::class])->group(function () {
         // Routes cho người dùng
         Route::get('/users', [UserController::class, 'index']);
+        Route::delete('/users/{id}', [UserController::class, 'destroy']);
+        Route::put('/users/{id}/role', [UserController::class, 'updateRole']);
+        
+        // Routes cho order
+        Route::get('/orders/all', [OrderController::class, 'getAllOrders']);
+        Route::put('/orders/{orderId}/status', [OrderController::class, 'updateOrderStatus']);
 
         // Routes cho môn thể thao
         Route::post('/sports', [SportController::class, 'store']);
@@ -89,6 +93,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Coupon admin routes
         Route::get('/coupons', [CouponController::class, 'index']);
         Route::post('/coupons', [CouponController::class, 'store']);
+        Route::put('/coupons/{id}', [CouponController::class, 'update']);
         Route::delete('/coupons/{id}', [CouponController::class, 'destroy']);
 
         // Product
