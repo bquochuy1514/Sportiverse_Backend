@@ -68,6 +68,10 @@ class OrderController extends Controller
                 // Create order items
                 foreach ($cart->items as $item) {
                     $price = $item->product->sale_price > 0 ? $item->product->sale_price : $item->product->price;
+                    $product = $item->product;
+                    $product->stock_quantity -= $item->quantity;
+                    $product->save();
+
                     OrderItem::create([
                         'order_id' => $order->id,
                         'product_id' => $item->product_id,
@@ -236,15 +240,30 @@ class OrderController extends Controller
 
         // Find order
         $order = Order::find($orderId);
+        $oldStatus = $order->status;
+        $newStatus = $request->status;
+
         if (!$order) {
             return response()->json([
                 'success' => false,
                 'message' => 'Không tìm thấy đơn hàng',
             ], 404);
         }
+        DB::transaction(function () use ($order, $oldStatus, $newStatus) {
+            // Nếu đơn hàng được hủy, hoàn trả số lượng sản phẩm về kho
+            if ($newStatus === 'cancelled' && $oldStatus !== 'cancelled') {
+                $this->restoreProductStock($order);
+            }
+            
+            // Nếu đơn hàng được khôi phục từ trạng thái hủy, trừ lại số lượng từ kho
+            if ($oldStatus === 'cancelled' && $newStatus !== 'cancelled') {
+                $this->deductProductStock($order);
+            }
 
-        // Update status
-        $order->status = $request->status;
+            // Cập nhật trạng thái đơn hàng
+            $order->update(['status' => $newStatus]);
+        });
+
         $order->save();
 
         return response()->json([
@@ -256,5 +275,82 @@ class OrderController extends Controller
                 'updated_at' => $order->updated_at->toDateTimeString(),
             ],
         ], 200);
+    }
+
+    private function restoreProductStock($order)
+    {
+        foreach ($order->orderItems as $orderItem) {
+            $product = $orderItem->product;
+            $product->stock_quantity += $orderItem->quantity;
+            $product->save();
+        }
+    }
+
+    private function deductProductStock($order)
+    {
+        foreach ($order->orderItems as $orderItem) {
+            $product = $orderItem->product;
+            
+            // Kiểm tra xem có đủ số lượng trong kho không
+            if ($product->stock_quantity < $orderItem->quantity) {
+                throw new \Exception("Sản phẩm '{$product->name}' không đủ số lượng trong kho để khôi phục đơn hàng. Còn lại: {$product->stock_quantity}, cần: {$orderItem->quantity}");
+            }
+            
+            $product->stock_quantity -= $orderItem->quantity;
+            $product->save();
+        }
+    }
+
+    public function cancelOrder(Request $request, $orderId)
+    {
+        try {
+            $user = Auth::user();
+            
+            // Tìm đơn hàng thuộc về user hiện tại
+            $order = Order::with('orderItems.product')
+                        ->where('id', $orderId)
+                        ->where('user_id', $user->id)
+                        ->first();
+
+            if (!$order) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không tìm thấy đơn hàng hoặc bạn không có quyền hủy đơn hàng này',
+                ], 404);
+            }
+
+            // Kiểm tra trạng thái đơn hàng có thể hủy không
+            if (in_array($order->status, ['shipped', 'delivered'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Đơn hàng không thể hủy ở trạng thái hiện tại',
+                ], 400);
+            }
+
+            DB::transaction(function () use ($order) {
+                // Hoàn trả số lượng sản phẩm về kho
+                $this->restoreProductStock($order);
+                
+                // Cập nhật trạng thái đơn hàng
+                $order->update([
+                    'status' => 'cancelled'
+                ]);
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Hủy đơn hàng thành công.',
+                'data' => [
+                    'order_id' => $order->id,
+                    'status' => $order->status,
+                ],
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi khi hủy đơn hàng: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

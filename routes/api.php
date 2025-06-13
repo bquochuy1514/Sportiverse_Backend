@@ -69,6 +69,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Order routes
     Route::post('/orders', [OrderController::class, 'placeOrder']);
     Route::get('/orders', [OrderController::class, 'getUserOrders']);
+    Route::put('/orders/{orderId}/cancel', [OrderController::class, 'cancelOrder']);
 
     // Coupon
     Route::post('/coupons/apply', [CouponController::class, 'applyCoupon']);
